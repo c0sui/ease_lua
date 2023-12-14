@@ -12,7 +12,7 @@
 ]]
 
 local Ease = {
-	__version = 1.0,
+	__version = 1.2,
 	__author = "Cosmo"
 }
 
@@ -205,28 +205,23 @@ Ease.inOutBounce = function(x)
 	end
 end
 
-function Ease:run(from, dest, start_time, duration, ease_anim, callback)
-	local efun = self[ease_anim] or self.linear
+function Ease:run(from, dest, start_time, duration, easing, callback)
+	local efun = self[easing] or self.linear
 	start_time = start_time or os.clock()
 
 	if type(callback) == "function" then
 		return self:createThread(from, dest, start_time, duration, efun, callback)
 	else
-		return self:calculateValue(from, dest, start_time, duration, efun)
+		return self:calculate(from, dest, start_time, duration, efun)
 	end
 end
 
 function Ease:createThread(from, dest, start_time, duration, efun, callback)
 	return lua_thread.create(function()
 		while true do
-			local timer = os.clock() - start_time
-			if timer >= 0 and timer <= duration then
-				local proc = 100 * efun(timer / duration)
-				callback(from + ((dest - from) / 100 * proc))
-			elseif timer <= duration then
-				callback(from)
-			else
-				callback(dest)
+			local value, status = self:calculate(from, dest, start_time, duration, efun)
+			callback(value, status)
+			if status == 2 then
 				break
 			end
 			wait(0)
@@ -234,13 +229,16 @@ function Ease:createThread(from, dest, start_time, duration, efun, callback)
 	end)
 end
 
-function Ease:calculateValue(from, dest, start_time, duration, efun)
+function Ease:calculate(from, dest, start_time, duration, efun)
 	local timer = os.clock() - start_time
 	if timer >= 0 and timer <= duration then
-		local proc = 0.01 * efun(timer / duration)
-		return from + (dest - from) * proc, true
+		local proc = 100 * efun(timer / duration)
+		return from + ((dest - from) / 100 * proc), 1
+	elseif timer > duration then
+		return dest, 2
+	else
+		return from, 0
 	end
-	return (timer > duration) and dest or from, false
 end
 
 setmetatable(Ease, {
