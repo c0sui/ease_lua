@@ -238,9 +238,9 @@ function Ease:calculateValue(from, dest, start_time, duration, efun)
 	local timer = os.clock() - start_time
 	if timer >= 0 and timer <= duration then
 		local proc = 0.01 * efun(timer / duration)
-		return from + (dest - from) * proc
+		return from + (dest - from) * proc, true
 	end
-	return (timer > duration) and dest or from
+	return (timer > duration) and dest or from, false
 end
 
 setmetatable(Ease, {
